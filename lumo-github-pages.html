@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>LumoAI - Chat Application</title>
+    <meta name="description" content="LumoAI - A playful Gen-Z AI chat companion" />
+    <meta property="og:title" content="LumoAI" />
+    <meta property="og:description" content="Chat with Lumo, your AI companion" />
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --background: hsl(0 0% 0%);
+            --foreground: hsl(200 6.6667% 91.1765%);
+            --card: hsl(228 9.8039% 10%);
+            --card-foreground: hsl(0 0% 85.0980%);
+            --border: hsl(210 5.2632% 14.9020%);
+            --muted: hsl(0 0% 9.4118%);
+            --muted-foreground: hsl(210 3.3898% 46.2745%);
+            --primary: hsl(203.7736 87.6033% 52.5490%);
+            --primary-foreground: hsl(0 0% 100%);
+            --destructive: hsl(356.3033 90.5579% 54.3137%);
+            --radius: 1.3rem;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            font-family: "Open Sans", sans-serif;
+            background-color: var(--background);
+            color: var(--foreground);
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: var(--background);
+        }
+
+        /* Header */
+        header {
+            border-bottom: 1px solid var(--border);
+            background-color: var(--background);
+            padding: 1.5rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--foreground);
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .api-status {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            background-color: var(--muted);
+            color: var(--muted-foreground);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .api-status.connected {
+            background-color: rgba(34, 197, 94, 0.1);
+            color: rgb(34, 197, 94);
+        }
+
+        .api-status.disconnected {
+            background-color: rgba(220, 38, 38, 0.1);
+            color: rgb(220, 38, 38);
+        }
+
+        .api-status .indicator {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            background-color: currentColor;
+        }
+
+        .icon-button {
+            background: transparent;
+            border: none;
+            color: var(--foreground);
+            cursor: pointer;
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s;
+        }
+
+        .icon-button:hover {
+            background-color: var(--muted);
+        }
+
+        .icon-button svg {
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+
+        /* Settings Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--foreground);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--foreground);
+        }
+
+        .form-group input {
+            width: 100%;
+            background-color: var(--background);
+            border: 1px solid var(--border);
+            color: var(--foreground);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 0.5rem;
+            color: var(--muted-foreground);
+            font-size: 0.75rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+
+        .button {
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        .button.primary {
+            background-color: var(--primary);
+            color: var(--primary-foreground);
+        }
+
+        .button.primary:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        .button.secondary {
+            background-color: var(--muted);
+            color: var(--foreground);
+        }
+
+        .button.secondary:hover:not(:disabled) {
+            opacity: 0.8;
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Main Chat Area */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 1.5rem;
+        }
+
+        /* Messages Container */
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding-bottom: 1rem;
+            scroll-behavior: smooth;
+        }
+
+        .messages-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .messages-container::-webkit-scrollbar-track {
+            background: var(--muted);
+            border-radius: 4px;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb {
+            background: var(--muted-foreground);
+            border-radius: 4px;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+        }
+
+        .empty-state-content h2 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--foreground);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state-content p {
+            font-size: 0.875rem;
+            color: var(--muted-foreground);
+        }
+
+        /* Messages */
+        .message {
+            display: flex;
+            margin-bottom: 1rem;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.assistant {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message-bubble {
+            padding: 1rem;
+            border-radius: 1rem;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        .message.user .message-bubble {
+            background-color: #000;
+            border: 1px solid #fff;
+            color: #fff;
+            font-size: 0.875rem;
+        }
+
+        .message.assistant .message-bubble {
+            background-color: var(--muted);
+            color: var(--foreground);
+            font-size: 0.875rem;
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: var(--muted-foreground);
+            margin-top: 0.25rem;
+            padding: 0 0.25rem;
+        }
+
+        .message.user .message-time {
+            text-align: right;
+        }
+
+        .message.assistant .message-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+        }
+
+        .copy-button {
+            background: transparent;
+            border: none;
+            color: var(--muted-foreground);
+            cursor: pointer;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            transition: color 0.2s;
+        }
+
+        .copy-button:hover {
+            color: var(--primary);
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 1rem;
+            background-color: var(--muted);
+            border-radius: 1rem;
+            width: fit-content;
+        }
+
+        .typing-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            background-color: var(--muted-foreground);
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                opacity: 0.5;
+            }
+            30% {
+                opacity: 1;
+            }
+        }
+
+        /* Input Area */
+        .input-area {
+            display: flex;
+            gap: 0.75rem;
+            padding-top: 1rem;
+            flex-shrink: 0;
+        }
+
+        textarea {
+            flex: 1;
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            color: var(--foreground);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: none;
+            min-height: 3rem;
+            max-height: 12rem;
+            overflow-y: auto;
+        }
+
+        textarea::placeholder {
+            color: var(--muted-foreground);
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .send-button {
+            background-color: var(--primary);
+            color: var(--primary-foreground);
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.2s;
+            flex-shrink: 0;
+            min-height: 3rem;
+            min-width: 3rem;
+        }
+
+        .send-button:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .message-content {
+                max-width: 85%;
+            }
+
+            header {
+                padding: 1rem;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            .input-area {
+                gap: 0.5rem;
+            }
+
+            .modal {
+                width: 95%;
+            }
+        }
+
+        .toast-container {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 999;
+        }
+
+        .toast {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            color: var(--foreground);
+            animation: slideIn 0.3s ease-out;
+            max-width: 300px;
+        }
+
+        .toast.error {
+            border-color: var(--destructive);
+            background-color: rgba(220, 38, 38, 0.1);
+        }
+
+        .toast.success {
+            border-color: var(--primary);
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header>
+            <h1>LumoAI</h1>
+            <div class="header-controls">
+                <div class="api-status" id="apiStatus">
+                    <div class="indicator"></div>
+                    <span id="apiStatusText">Disconnected</span>
+                </div>
+                <button class="icon-button" id="settingsButton" title="Settings">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="1"></circle>
+                        <circle cx="19" cy="12" r="1"></circle>
+                        <circle cx="5" cy="12" r="1"></circle>
+                    </svg>
+                </button>
+                <button class="icon-button" id="themeToggle" title="Toggle theme">
+                    <svg id="sunIcon" style="display: none;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg id="moonIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Chat Area -->
+        <main>
+            <!-- Messages Container -->
+            <div class="messages-container" id="messagesContainer">
+                <div class="empty-state">
+                    <div class="empty-state-content">
+                        <h2>Start a Conversation</h2>
+                        <p>Type your message to start chat with Lumo</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <textarea 
+                    id="messageInput" 
+                    placeholder="Type your message..." 
+                    rows="3"
+                    data-testid="input-message"
+                ></textarea>
+                <button 
+                    class="send-button" 
+                    id="sendButton"
+                    data-testid="button-send"
+                >
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 1.25rem; height: 1.25rem;">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <h2>Settings</h2>
+            
+            <div class="form-group">
+                <label for="backendUrl">Backend API URL</label>
+                <input 
+                    type="text" 
+                    id="backendUrl" 
+                    placeholder="https://your-backend.onrender.com"
+                />
+                <small>Example: https://lumo-api.onrender.com (without /api)</small>
+            </div>
+
+            <div class="form-group">
+                <label>Current API Base</label>
+                <input 
+                    type="text" 
+                    id="currentApiBase" 
+                    readonly
+                />
+                <small>This is where the app will send messages</small>
+            </div>
+
+            <div class="form-group">
+                <p style="font-size: 0.875rem; color: var(--muted-foreground); margin: 0;">
+                    ✅ <strong>Hints:</strong><br>
+                    • If running locally: http://localhost:5000<br>
+                    • If on Render: https://your-app-name.onrender.com<br>
+                    • Test the connection below
+                </p>
+            </div>
+
+            <div class="modal-actions">
+                <button class="button secondary" id="testConnectionBtn">Test Connection</button>
+                <button class="button secondary" id="resetBtn">Reset to Default</button>
+                <button class="button primary" id="saveBtn">Save</button>
+                <button class="button secondary" id="closeBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // State Management
+        const state = {
+            conversationId: null,
+            messages: [],
+            isLoading: false,
+            theme: localStorage.getItem('theme') || 'dark',
+            aiMode: 'default',
+            apiBase: localStorage.getItem('lumoApiBase') || window.location.origin
+        };
+
+        // DOM Elements
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const themeToggle = document.getElementById('themeToggle');
+        const toastContainer = document.getElementById('toastContainer');
+        const sunIcon = document.getElementById('sunIcon');
+        const moonIcon = document.getElementById('moonIcon');
+        const settingsButton = document.getElementById('settingsButton');
+        const settingsModal = document.getElementById('settingsModal');
+        const backendUrlInput = document.getElementById('backendUrl');
+        const currentApiBaseDisplay = document.getElementById('currentApiBase');
+        const testConnectionBtn = document.getElementById('testConnectionBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const closeBtn = document.getElementById('closeBtn');
+        const apiStatus = document.getElementById('apiStatus');
+        const apiStatusText = document.getElementById('apiStatusText');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeTheme();
+            setupEventListeners();
+            updateThemeIcons();
+            updateApiBaseDisplay();
+            checkApiConnection();
+        });
+
+        // Theme Management
+        function initializeTheme() {
+            applyTheme(state.theme);
+        }
+
+        function applyTheme(theme) {
+            state.theme = theme;
+            localStorage.setItem('theme', theme);
+            updateThemeIcons();
+        }
+
+        function updateThemeIcons() {
+            if (state.theme === 'dark') {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            } else {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            }
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const newTheme = state.theme === 'dark' ? 'light' : 'dark';
+            applyTheme(newTheme);
+        });
+
+        // Settings Modal
+        settingsButton.addEventListener('click', () => {
+            backendUrlInput.value = state.apiBase;
+            updateApiBaseDisplay();
+            settingsModal.classList.add('active');
+        });
+
+        closeBtn.addEventListener('click', () => {
+            settingsModal.classList.remove('active');
+        });
+
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                settingsModal.classList.remove('active');
+            }
+        });
+
+        function updateApiBaseDisplay() {
+            currentApiBaseDisplay.value = state.apiBase + '/api';
+        }
+
+        testConnectionBtn.addEventListener('click', async () => {
+            const url = backendUrlInput.value.trim();
+            if (!url) {
+                showToast('Please enter a backend URL', 'error');
+                return;
+            }
+
+            testConnectionBtn.disabled = true;
+            try {
+                const response = await fetch(`${url}/api/conversations`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (response.ok) {
+                    showToast('✅ Connection successful!', 'success');
+                } else {
+                    showToast('❌ Connection failed: ' + response.status, 'error');
+                }
+            } catch (error) {
+                showToast('❌ Connection error: ' + error.message, 'error');
+            } finally {
+                testConnectionBtn.disabled = false;
+            }
+        });
+
+        resetBtn.addEventListener('click', () => {
+            backendUrlInput.value = window.location.origin;
+        });
+
+        saveBtn.addEventListener('click', () => {
+            const url = backendUrlInput.value.trim();
+            if (!url) {
+                showToast('Please enter a backend URL', 'error');
+                return;
+            }
+            state.apiBase = url;
+            localStorage.setItem('lumoApiBase', url);
+            updateApiBaseDisplay();
+            showToast('✅ Backend URL saved!', 'success');
+            settingsModal.classList.remove('active');
+            checkApiConnection();
+        });
+
+        // Event Listeners
+        function setupEventListeners() {
+            sendButton.addEventListener('click', handleSendMessage);
+            messageInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                }
+            });
+            messageInput.addEventListener('input', autoResizeTextarea);
+        }
+
+        // Textarea Auto-resize
+        function autoResizeTextarea() {
+            messageInput.style.height = 'auto';
+            messageInput.style.height = Math.min(messageInput.scrollHeight, 200) + 'px';
+        }
+
+        // Check API Connection
+        async function checkApiConnection() {
+            try {
+                const response = await fetch(`${state.apiBase}/api/conversations`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (response.ok) {
+                    apiStatus.classList.remove('disconnected');
+                    apiStatus.classList.add('connected');
+                    apiStatusText.textContent = 'Connected';
+                } else {
+                    apiStatus.classList.remove('connected');
+                    apiStatus.classList.add('disconnected');
+                    apiStatusText.textContent = 'Disconnected';
+                }
+            } catch (error) {
+                apiStatus.classList.remove('connected');
+                apiStatus.classList.add('disconnected');
+                apiStatusText.textContent = 'Disconnected';
+            }
+        }
+
+        // Send Message
+        async function handleSendMessage() {
+            const content = messageInput.value.trim();
+            if (!content || state.isLoading) return;
+
+            // Create conversation if needed
+            if (!state.conversationId) {
+                await createConversation();
+            }
+
+            if (!state.conversationId) {
+                showToast('Failed to create conversation', 'error');
+                return;
+            }
+
+            state.isLoading = true;
+            sendButton.disabled = true;
+
+            try {
+                // Add user message
+                const userMessage = {
+                    id: generateId(),
+                    content,
+                    role: 'user',
+                    timestamp: new Date().toISOString(),
+                    conversationId: state.conversationId
+                };
+
+                state.messages.push(userMessage);
+                messageInput.value = '';
+                messageInput.style.height = 'auto';
+                renderMessages();
+                showTypingIndicator();
+
+                // Send to API
+                const response = await fetch(`${state.apiBase}/api/chat/${state.conversationId}?mode=${state.aiMode}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content, role: 'user' })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                state.messages.push(data.aiMessage);
+
+                renderMessages();
+                scrollToBottom();
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Failed to send message: ' + error.message, 'error');
+            } finally {
+                state.isLoading = false;
+                sendButton.disabled = false;
+            }
+        }
+
+        // Create Conversation
+        async function createConversation() {
+            try {
+                const response = await fetch(`${state.apiBase}/api/conversations`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mode: state.aiMode,
+                        title: `Chat - ${new Date().toLocaleDateString()}`
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                state.conversationId = data.id;
+            } catch (error) {
+                console.error('Error creating conversation:', error);
+                showToast('Failed to create conversation: ' + error.message, 'error');
+            }
+        }
+
+        // Render Messages
+        function renderMessages() {
+            if (state.messages.length === 0) {
+                messagesContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-content">
+                            <h2>Start a Conversation</h2>
+                            <p>Type your message to start chat with Lumo</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            messagesContainer.innerHTML = state.messages.map((msg) => `
+                <div class="message ${msg.role}" data-testid="message-${msg.role}-${msg.id}">
+                    <div class="message-content">
+                        <div class="message-bubble" data-testid="text-${msg.role}-message-${msg.id}">
+                            ${escapeHtml(msg.content)}
+                        </div>
+                        <div class="message-time" data-testid="timestamp-${msg.id}">
+                            ${formatTime(msg.timestamp)}
+                        </div>
+                        ${msg.role === 'assistant' ? `
+                            <div class="message-actions">
+                                <button class="copy-button" data-testid="button-copy-${msg.id}" onclick="copyMessage('${escapeHtml(msg.content).replace(/'/g, "\\'")}')">
+                                    <span>📋 Copy</span>
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Show Typing Indicator
+        function showTypingIndicator() {
+            const indicator = `
+                <div class="message assistant">
+                    <div class="typing-indicator">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            `;
+            messagesContainer.insertAdjacentHTML('beforeend', indicator);
+            scrollToBottom();
+        }
+
+        // Copy Message
+        function copyMessage(content) {
+            navigator.clipboard.writeText(content).then(() => {
+                showToast('Message copied to clipboard', 'success');
+            }).catch(() => {
+                showToast('Failed to copy message', 'error');
+            });
+        }
+
+        // Toast Notification
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Utility Functions
+        function formatTime(timestamp) {
+            return new Date(timestamp).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function generateId() {
+            return Math.random().toString(36).substr(2, 9);
+        }
+
+        function scrollToBottom() {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>
